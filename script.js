@@ -53,35 +53,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
   
-    // Event delegation for dynamically added prompts  
-    promptLibrary.addEventListener('click', (event) => {
-        if (event.target && event.target.matches('.prompt-list li')) {
-            const item = event.target;
-            const promptDescription = item.getAttribute('data-prompt-description');
-            const promptTitle = item.getAttribute('data-prompt-title');
-            if (fusionModeActive) {
-                if (selectedPrompts.includes(promptDescription)) {
-                    selectedPrompts = selectedPrompts.filter(prompt => prompt !== promptDescription);
-                } else {
-                    selectedPrompts.push(promptDescription);
-                }
-                item.classList.toggle('selected');
-                const remainingPrompts = numberOfPromptsToCombine - selectedPrompts.length;
-                let message = `Selected prompt: "${promptTitle}".<br>`;
-                if (remainingPrompts > 0) {
-                    message += `Go on and select ${remainingPrompts} more prompt(s).`;
-                } else {
-                    message += `All prompts selected.`;
-                }
-                addMessage("assistant", message, true); // Set isHTML to true to render HTML
-                if (selectedPrompts.length === numberOfPromptsToCombine) {
-                    combineAndGenerateImage();
-                }
-            } else {
-                selectPrompt(promptDescription);
+// Add this function to display the error message
+function showErrorMessage() {
+    addMessage("assistant", "Please enter input before selecting a prompt.");
+}
+
+// Modify the prompt selection event listener to include error handling
+promptLibrary.addEventListener('click', (event) => {
+    if (event.target && event.target.matches('.prompt-list li')) {
+        const item = event.target;
+        const promptDescription = item.getAttribute('data-prompt-description');
+        const promptTitle = item.getAttribute('data-prompt-title');
+        if (fusionModeActive) {
+            if (numberOfPromptsToCombine <= 0) {
+                showErrorMessage();
+                return;
             }
+            if (selectedPrompts.includes(promptDescription)) {
+                selectedPrompts = selectedPrompts.filter(prompt => prompt !== promptDescription);
+            } else {
+                selectedPrompts.push(promptDescription);
+            }
+            item.classList.toggle('selected');
+            const remainingPrompts = numberOfPromptsToCombine - selectedPrompts.length;
+            let message = `Selected prompt: "${promptTitle}".<br>`;
+            if (remainingPrompts > 0) {
+                message += `Go on and select ${remainingPrompts} more prompt(s).`;
+            } else {
+                message += `All prompts selected.`;
+            }
+            addMessage("assistant", message, true); // Set isHTML to true to render HTML
+            if (selectedPrompts.length === numberOfPromptsToCombine) {
+                combineAndGenerateImage();
+            }
+        } else {
+            selectPrompt(promptDescription);
         }
-    });
+    }
+});
 
     async function combineAndGenerateImage() {
         try {
@@ -267,8 +276,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     function handleSendOrEnter() {
         if (fusionModeActive) {
             if (awaitingFollowupResponse) {
-                numberOfPromptsToCombine = parseInt(userInput.value.trim(), 10);
-                if (isNaN(numberOfPromptsToCombine) || numberOfPromptsToCombine <= 0) {
+                const userInputValue = userInput.value.trim().toLowerCase();
+                const numberWords = {
+                    "one": 1,
+                    "two": 2,
+                    "three": 3,
+                    "four": 4,
+                    "five": 5,
+                    "six": 6,
+                    "seven": 7,
+                    "eight": 8,
+                    "nine": 9,
+                    "ten": 10
+                };
+    
+                numberOfPromptsToCombine = parseInt(userInputValue, 10);
+                if (isNaN(numberOfPromptsToCombine)) {
+                    numberOfPromptsToCombine = numberWords[userInputValue];
+                }
+    
+                if (!numberOfPromptsToCombine || numberOfPromptsToCombine <= 0) {
                     addMessage("assistant", "Please enter a valid number of prompts to combine.");
                 } else {
                     addMessage("assistant", `Please select ${numberOfPromptsToCombine} prompts from the Prompt Library.`);
